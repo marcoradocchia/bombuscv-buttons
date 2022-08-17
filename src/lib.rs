@@ -1,8 +1,6 @@
 mod error;
 
 pub use error::ErrorKind;
-use procfs::process::all_processes;
-
 pub use nix::{
     sys::{
         signal::{
@@ -14,6 +12,7 @@ pub use nix::{
     unistd::{fork as nix_fork, ForkResult, Pid},
 };
 
+use procfs::process::all_processes;
 use std::process::Command;
 
 /// Spawn & fork child process.
@@ -27,23 +26,23 @@ pub fn fork(bin: &str) -> Result<(), ErrorKind> {
 
         Ok(ForkResult::Child) => {
             if Command::new(bin).spawn().is_err() {
-                return Err(ErrorKind::SpawnFail(bin.to_string()));
+                return Err(ErrorKind::SpawnErr(bin.to_string()));
             }
         }
 
-        Err(_) => return Err(ErrorKind::ForkFail(bin.to_string())),
+        Err(_) => return Err(ErrorKind::ForkErr(bin.to_string())),
     };
 
     Ok(())
 }
 
 /// Check for running process returning bool whether the process is running or not.
-pub fn pgrep(name: &str) -> Result<Option<Pid>, ErrorKind> {
+pub fn pgrep(bin: &str) -> Result<Option<Pid>, ErrorKind> {
     if let Ok(proc_list) = all_processes() {
         for proc in proc_list {
             let proc = proc.unwrap();
-            if let Ok(bin) = proc.exe() {
-                if bin.file_stem().unwrap() == name {
+            if let Ok(exe) = proc.exe() {
+                if exe.file_stem().unwrap() == bin {
                     return Ok(Some(Pid::from_raw(proc.pid)));
                 }
             }
@@ -53,4 +52,13 @@ pub fn pgrep(name: &str) -> Result<Option<Pid>, ErrorKind> {
     }
 
     Ok(None)
+}
+
+/// Signal datalogger process to toggle CSV behaviour.
+pub fn signal(bin: &str) -> Result<(), ErrorKind> {
+    if let Some(pid) = pgrep(bin)? {
+        kill(pid, SIGUSR1).map_err(|_| ErrorKind::SignalErr(bin.to_string()))?;
+    }
+
+    Ok(())
 }
