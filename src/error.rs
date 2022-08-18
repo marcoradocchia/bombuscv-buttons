@@ -23,6 +23,12 @@ pub enum ErrorKind {
 
     /// Occurs when unable to set interrupt on specified GPIO Pin.
     InterruptErr,
+
+    /// Occurs when unable to join thread.
+    ThreadJoinErr(String),
+
+    /// Occurs when unable to poll interrupt.
+    PollInterruptErr,
 }
 
 /// Implementing Display trait for ErrorKind enum.
@@ -36,6 +42,8 @@ impl Display for ErrorKind {
             Self::GpioErr => write!(f, "unable to access GPIO"),
             Self::PinErr(err) => write!(f, "unable to access GPIO pin `{}`", err),
             Self::InterruptErr => write!(f, "unable to set interrupt on specified pin"),
+            Self::ThreadJoinErr(err) => write!(f, "unable to join thread `{}`", err),
+            Self::PollInterruptErr => write!(f, "unable to poll interrupt"),
         }
     }
 }

@@ -5,7 +5,15 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "buttons"
+path = "src/main.rs"
+
 [dependencies]
 rppal = "0.13.1"
-nix = "0.24.2"
+nix = "0.25.0"
 procfs = "0.14.0"
+
+[profile.release]
+lto = true   # link-time-optimization
+strip = true # strip symbols from binary

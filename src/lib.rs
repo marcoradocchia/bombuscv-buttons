@@ -1,6 +1,7 @@
 mod error;
 
 pub use error::ErrorKind;
+pub use nix::sys::signal::Signal;
 pub use nix::{
     sys::{
         signal::{
@@ -13,6 +14,7 @@ pub use nix::{
 };
 
 use procfs::process::all_processes;
+use rppal::gpio::{Gpio, InputPin, PullUpDown};
 use std::process::Command;
 
 /// Spawn & fork child process.
@@ -54,11 +56,24 @@ pub fn pgrep(bin: &str) -> Result<Option<Pid>, ErrorKind> {
     Ok(None)
 }
 
-/// Signal datalogger process to toggle CSV behaviour.
-pub fn signal(bin: &str) -> Result<(), ErrorKind> {
+/// Signal process sending SIGUSR1 signal.
+pub fn signal(bin: &str, signal: Signal) -> Result<(), ErrorKind> {
     if let Some(pid) = pgrep(bin)? {
-        kill(pid, SIGUSR1).map_err(|_| ErrorKind::SignalErr(bin.to_string()))?;
+        kill(pid, signal).map_err(|_| ErrorKind::SignalErr(bin.to_string()))?;
     }
 
     Ok(())
+}
+
+/// Setup Pin as InputPin with internal pullup resistor enabled.
+pub fn input_pin(gpio: &Gpio, pin: u8, pull_up_down: PullUpDown) -> Result<InputPin, ErrorKind> {
+    let pin = gpio
+        .get(pin)
+        .map_err(|err| ErrorKind::PinErr(err.to_string()))?;
+
+    Ok(match pull_up_down {
+        PullUpDown::Off => pin.into_input(),
+        PullUpDown::PullDown => pin.into_input_pulldown(),
+        PullUpDown::PullUp => pin.into_input_pullup(),
+    })
 }
